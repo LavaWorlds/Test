@@ -1,0 +1,36 @@
+// Import necessary libraries
+const { Plugin } = require('vendetta');
+const { getModule } = require('vendetta/dist');
+
+// Create a new plugin
+module.exports = new Plugin({
+  manifest: require('./manifest.json'),
+  name: 'Typing Avatars',
+  description: 'Replaces the typing indicator with the avatars of those who are typing.',
+  onLoad: async () => {
+    const typingModule = await getModule('startTyping');
+
+    // Override the startTyping function to add avatar logic
+    const originalStartTyping = typingModule.startTyping;
+    typingModule.startTyping = (channelId, userId) => {
+      // Call the original startTyping function
+      originalStartTyping(channelId, userId);
+
+      // Get the user object
+      const user = getModule('getUser').getUser(userId);
+      const avatarURL = user.getAvatarURL();
+      const username = user.username;
+
+      // Add your logic here to display the avatar beside the username in the chat box
+      // This will depend on how your chat box is implemented
+      console.log(`User ${username} is typing with avatar: ${avatarURL}`);
+    };
+  },
+  onUnload: () => {
+    // Clean up when the plugin is unloaded
+    const typingModule = getModule('startTyping');
+    if (typingModule.startTyping === originalStartTyping) {
+      typingModule.startTyping = originalStartTyping;
+    }
+  },
+});
