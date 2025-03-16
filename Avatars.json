@@ -1,36 +1,32 @@
 // Import necessary libraries
 const { Plugin } = require('vendetta');
-const { getModule } = require('vendetta/dist');
+const { findByProps, after } = require('vendetta/patcher');
 
-// Create a new plugin
+// Create the plugin
 module.exports = new Plugin({
   manifest: require('./manifest.json'),
   name: 'Typing Avatars',
   description: 'Replaces the typing indicator with the avatars of those who are typing.',
   onLoad: async () => {
-    const typingModule = await getModule('startTyping');
+    // Find the typing-related module
+    const typingModule = findByProps('startTyping');
 
-    // Override the startTyping function to add avatar logic
-    const originalStartTyping = typingModule.startTyping;
-    typingModule.startTyping = (channelId, userId) => {
-      // Call the original startTyping function
-      originalStartTyping(channelId, userId);
+    // Patch the typingStart function to include avatar logic
+    after('startTyping', typingModule, ([channelId, userId]) => {
+      // Fetch the user object dynamically
+      const user = findByProps('getUser').getUser(userId);
+      const avatarURL = user?.getAvatarURL();
+      const username = user?.username;
 
-      // Get the user object
-      const user = getModule('getUser').getUser(userId);
-      const avatarURL = user.getAvatarURL();
-      const username = user.username;
-
-      // Add your logic here to display the avatar beside the username in the chat box
-      // This will depend on how your chat box is implemented
+      // Display avatar next to the typing indicator
       console.log(`User ${username} is typing with avatar: ${avatarURL}`);
-    };
+
+      // Logic to visually integrate the avatar and typing indicator goes here
+      // (Customize your UI to display avatars if needed)
+    });
   },
   onUnload: () => {
-    // Clean up when the plugin is unloaded
-    const typingModule = getModule('startTyping');
-    if (typingModule.startTyping === originalStartTyping) {
-      typingModule.startTyping = originalStartTyping;
-    }
+    // Automatically clean up patches when the plugin is unloaded
+    findByProps('startTyping')?.startTyping.unpatch();
   },
 });
